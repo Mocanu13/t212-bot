@@ -1,0 +1,38 @@
+name: T212 demo bot
+
+on:
+  schedule:
+    # Two start times so it works in both US summer and winter time.
+    # The bot exits by itself if it started at the wrong one.
+    - cron: "20 13 * * 1-5"
+    - cron: "20 14 * * 1-5"
+  workflow_dispatch: {}
+
+concurrency:
+  group: t212-bot
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests yfinance pandas
+      - name: Run bot
+        env:
+          T212_API_KEY: ${{ secrets.T212_API_KEY }}
+          T212_API_SECRET: ${{ secrets.T212_API_SECRET }}
+          EXIT_AFTER_CLOSE: "1"
+          FLATTEN_AT: "15:10"
+        run: python t212_scalper.py
+      - name: Save log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scalper-log
+          path: scalper_log.csv
+          if-no-files-found: ignore
